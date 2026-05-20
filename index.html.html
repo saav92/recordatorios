@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Recordatorios">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000000">
+
+  <title>Recordatorios</title>
+  <style>
+    :root {
+      --indigo:    #6366f1;
+      --indigo-dk: #4f52d6;
+      --dark:      #1d1d1f;
+      --card:      #2c2c2e;
+      --input:     #3a3a3c;
+      --border:    #48484a;
+      --green:     #22c55e;
+      --green-bg:  #071a10;
+      --red:       #ff3b30;
+      --text:      #f5f5f7;
+      --muted:     #8e8e93;
+    }
+
+    *, *::before, *::after {
+      margin: 0; padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      height: 100%;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      min-height: 100%;
+      min-height: -webkit-fill-available;
+      background: var(--dark);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: #000;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding-top: env(safe-area-inset-top);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+    }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+    }
+
+    .badge {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      background: #1c1c1e;
+      padding: 4px 11px;
+      border-radius: 20px;
+      letter-spacing: 0.1px;
+    }
+
+    /* ── MAIN ── */
+    main {
+      padding: 20px 16px calc(env(safe-area-inset-bottom) + 28px);
+    }
+
+    /* ── FORM CARD ── */
+    .form-card {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 18px 16px 16px;
+      margin-bottom: 28px;
+    }
+
+    .field {
+      margin-bottom: 13px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    input[type="time"] {
+      width: 100%;
+      background: var(--input);
+      border: 1.5px solid transparent;
+      border-radius: 11px;
+      color: var(--text);
+      font-size: 16px;          /* prevents iOS zoom */
+      font-family: inherit;
+      padding: 12px 14px;
+      -webkit-appearance: none;
+      outline: none;
+      transition: border-color .18s;
+    }
+
+    input[type="text"]::placeholder { color: #636366; }
+
+    input[type="text"]:focus,
+    input[type="time"]:focus {
+      border-color: var(--indigo);
+    }
+
+    input[type="text"].error { border-color: var(--red) !important; }
+
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) brightness(.5);
+      cursor: pointer;
+    }
+
+    .btn-add {
+      width: 100%;
+      margin-top: 4px;
+      padding: 15px;
+      background: var(--indigo);
+      color: #fff;
+      border: none;
+      border-radius: 13px;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: -0.2px;
+      cursor: pointer;
+      -webkit-appearance: none;
+      transition: opacity .15s, transform .1s;
+    }
+
+    .btn-add:active { opacity: .82; transform: scale(.98); }
+
+    /* ── SECTION ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 13px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .9px;
+      color: var(--muted);
+    }
+
+    .btn-clear {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--red);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      -webkit-appearance: none;
+      opacity: .8;
+      font-family: inherit;
+      padding: 2px 0;
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty {
+      text-align: center;
+      padding: 52px 20px 40px;
+    }
+
+    .empty-icon { font-size: 44px; margin-bottom: 14px; }
+
+    .empty-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+
+    .empty-sub { font-size: 14px; color: var(--muted); }
+
+    /* ── REMINDER LIST ── */
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ── REMINDER CARD ── */
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 13px 14px 13px 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      border-left: 4px solid var(--indigo);
+      transition: background .22s, border-color .22s;
+    }
+
+    .card.done {
+      background: var(--green-bg);
+      border-left-color: var(--green);
+    }
+
+    /* Toggle button */
+    .btn-toggle {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--indigo);
+      background: transparent;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-appearance: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .2s, border-color .2s;
+      margin-top: 1px;
+    }
+
+    .card.done .btn-toggle {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .btn-toggle:active { transform: scale(.88); }
+
+    /* Content */
+    .card-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-text {
+      font-size: 15px;
+      font-weight: 500;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      line-height: 1.4;
+      transition: color .22s;
+    }
+
+    .card.done .card-text {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    .card-time {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* Delete button */
+    .btn-del {
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255,59,48,.1);
+      color: var(--red);
+      cursor: pointer;
+      -webkit-appearance: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s, transform .1s;
+      margin-top: 0;
+    }
+
+    .btn-del:active {
+      background: rgba(255,59,48,.22);
+      transform: scale(.88);
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(env(safe-area-inset-bottom) + 22px);
+      transform: translateX(-50%) translateY(90px);
+      background: #22c55e;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .1px;
+      padding: 11px 22px;
+      border-radius: 100px;
+      z-index: 999;
+      white-space: nowrap;
+      pointer-events: none;
+      transition: transform .32s cubic-bezier(.34,1.56,.64,1), opacity .32s;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <span class="header-title">Recordatorios</span>
+    <span class="badge" id="badge">0 pendientes</span>
+  </div>
+</header>
+
+<main>
+  <!-- Form -->
+  <div class="form-card">
+    <div class="field">
+      <label class="field-label" for="inp-text">Recordatorio</label>
+      <input type="text" id="inp-text"
+        placeholder="¿Qué necesitas recordar?"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="sentences"
+        spellcheck="false">
+    </div>
+    <div class="field" style="margin-bottom:0">
+      <label class="field-label" for="inp-time">Hora (opcional)</label>
+      <input type="time" id="inp-time">
+    </div>
+    <button class="btn-add" onclick="addReminder()">＋ Agregar recordatorio</button>
+  </div>
+
+  <!-- List -->
+  <div class="section-header">
+    <span class="section-title">Mis recordatorios</span>
+    <button class="btn-clear" id="btn-clear" onclick="clearDone()" style="display:none">
+      Limpiar completados
+    </button>
+  </div>
+  <div id="list"></div>
+</main>
+
+<div id="toast">✓ Recordatorio agregado</div>
+
+<script>
+  /* ─── CONFIG ─── */
+  const NTFY = 'https://ntfy.sh/recordatorios-edwin';
+  const KEY  = 'reminders_v3';
+
+  /* ─── STATE ─── */
+  let items = [];
+
+  /* ─── ICON (canvas → PNG → apple-touch-icon) ─── */
+  (function generateIcon() {
+    try {
+      const c = document.createElement('canvas');
+      c.width = c.height = 180;
+      const ctx = c.getContext('2d');
+
+      // Rounded rect background
+      ctx.fillStyle = '#6366f1';
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(0, 0, 180, 180, 38);
+        ctx.fill();
+      } else {
+        ctx.fillRect(0, 0, 180, 180);
+      }
+
+      // Checkmark
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 17;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(44, 91);
+      ctx.lineTo(78, 125);
+      ctx.lineTo(138, 57);
+      ctx.stroke();
+
+      const url = c.toDataURL('image/png');
+      const link = document.createElement('link');
+      link.rel = 'apple-touch-icon';
+      link.href = url;
+      document.head.appendChild(link);
+
+      const link2 = document.createElement('link');
+      link2.rel = 'icon';
+      link2.href = url;
+      document.head.appendChild(link2);
+    } catch(e) {}
+  })();
+
+  /* ─── STORAGE ─── */
+  function load() {
+    try { items = JSON.parse(localStorage.getItem(KEY)) || []; }
+    catch { items = []; }
+    render();
+  }
+
+  function save() {
+    localStorage.setItem(KEY, JSON.stringify(items));
+  }
+
+  /* ─── ADD ─── */
+  function addReminder() {
+    const inp = document.getElementById('inp-text');
+    const txt = inp.value.trim();
+    const time = document.getElementById('inp-time').value;
+
+    if (!txt) {
+      inp.classList.add('error');
+      inp.focus();
+      setTimeout(() => inp.classList.remove('error'), 1600);
+      return;
+    }
+
+    const item = { id: Date.now(), text: txt, time: time || null, done: false };
+    items.unshift(item);
+    save();
+    render();
+
+    inp.value = '';
+    document.getElementById('inp-time').value = '';
+    document.activeElement?.blur();
+
+    showToast('✓ Recordatorio agregado');
+    sendNtfy(item);
+  }
+
+  /* ─── NTFY ─── */
+  async function sendNtfy(item) {
+    try {
+      await fetch(NTFY, {
+        method: 'POST',
+        body: item.time ? `${item.text} — ${item.time}` : item.text,
+        headers: {
+          'Title': 'Nuevo Recordatorio',
+          'Content-Type': 'text/plain; charset=utf-8'
+        }
+      });
+    } catch (e) { /* offline, silently skip */ }
+  }
+
+  /* ─── TOGGLE / DELETE ─── */
+  function toggleDone(id) {
+    const it = items.find(i => i.id === id);
+    if (it) { it.done = !it.done; save(); render(); }
+  }
+
+  function deleteItem(id) {
+    items = items.filter(i => i.id !== id);
+    save(); render();
+  }
+
+  function clearDone() {
+    items = items.filter(i => !i.done);
+    save(); render();
+  }
+
+  /* ─── TOAST ─── */
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  /* ─── ESCAPE ─── */
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  /* ─── CLOCK ICON SVG ─── */
+  const clockSVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  </svg>`;
+
+  /* ─── TRASH ICON SVG ─── */
+  const trashSVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+    <path d="M10 11v6"/><path d="M14 11v6"/>
+    <path d="M9 6V4h6v2"/>
+  </svg>`;
+
+  /* ─── RENDER ─── */
+  function render() {
+    const list    = document.getElementById('list');
+    const badge   = document.getElementById('badge');
+    const btnClr  = document.getElementById('btn-clear');
+
+    const pending   = items.filter(i => !i.done).length;
+    const hasDone   = items.some(i => i.done);
+
+    badge.textContent  = `${pending} pendiente${pending !== 1 ? 's' : ''}`;
+    btnClr.style.display = hasDone ? 'block' : 'none';
+
+    if (items.length === 0) {
+      list.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">Sin recordatorios</div>
+          <div class="empty-sub">Escribe algo arriba y toca Agregar</div>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = `<div class="list">${items.map(item => {
+      const timeBlock = item.time
+        ? `<div class="card-time">${clockSVG}${item.time}</div>`
+        : '';
+      return `
+        <div class="card${item.done ? ' done' : ''}">
+          <button class="btn-toggle" onclick="toggleDone(${item.id})"
+            aria-label="${item.done ? 'Desmarcar' : 'Marcar completado'}">
+            ${item.done ? '✓' : ''}
+          </button>
+          <div class="card-content">
+            <div class="card-text">${esc(item.text)}</div>
+            ${timeBlock}
+          </div>
+          <button class="btn-del" onclick="deleteItem(${item.id})" aria-label="Eliminar">
+            ${trashSVG}
+          </button>
+        </div>`;
+    }).join('')}</div>`;
+  }
+
+  /* ─── ENTER KEY ─── */
+  document.getElementById('inp-text').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addReminder();
+  });
+
+  /* ─── INIT ─── */
+  load();
+</script>
+</body>
+</html>
