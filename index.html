@@ -194,7 +194,7 @@
     <div class="field">
       <label class="field-label" for="inp-text">Recordatorio</label>
       <input type="text" id="inp-text" placeholder="¿Qué necesitas recordar?"
-        autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false">
+        autocomplete="off" autocorrect="on" autocapitalize="sentences" spellcheck="true">
     </div>
 
     <div class="field">
@@ -378,16 +378,13 @@ async function addItem() {
 /* ── NTFY ── */
 async function sendNtfy(item) {
   try {
-    const cat = CATS.find(c => c.id === item.category);
-    const body = item.time ? `${item.text} — ${item.time}` : item.text;
-    await fetch(NTFY, {
-      method:'POST', body,
-      headers:{
-        'Title':`${cat ? cat.emoji+' '+cat.label : 'Recordatorio'}`,
-        'Priority': item.priority==='alta'?'high':item.priority==='media'?'default':'low',
-        'Content-Type':'text/plain; charset=utf-8'
-      }
-    });
+    const cat   = CATS.find(c => c.id === item.category);
+    const body  = item.time ? `${item.text} — ${item.time}` : item.text;
+    const title = cat ? `${cat.emoji} ${cat.label}` : 'Recordatorio';
+    const prio  = item.priority==='alta' ? 'high' : item.priority==='media' ? 'default' : 'low';
+    // Query params instead of headers → evita CORS preflight
+    const url   = `${NTFY}?title=${encodeURIComponent(title)}&priority=${prio}&tags=bell`;
+    await fetch(url, { method:'POST', body });
   } catch(e) {}
 }
 
